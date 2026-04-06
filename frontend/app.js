@@ -1,3 +1,5 @@
+const API_URL = "https://resume-backend-hy56.onrender.com";
+
 document.addEventListener('DOMContentLoaded', () => {
     // Elements
     const addResumeBtn = document.getElementById('add-resume-btn');
@@ -7,10 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsCount = document.getElementById('results-count');
     const retrainBtn = document.getElementById('retrain-btn');
 
-    // API Base URL
-    const API_BASE = (window.location.protocol === 'file:' || (window.location.hostname === 'localhost' && window.location.port !== '8000' && window.location.port !== ''))
-        ? 'http://localhost:8000'
-        : '';
+
     let distributionChart = null;
 
     function animateValue(id, start, end, duration) {
@@ -39,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fileInput.addEventListener('change', handleFileUploads);
     screenBtn.addEventListener('click', handleScreening);
     retrainBtn.addEventListener('click', handleRetraining);
-    
+
     // Drag and Drop Logic
     const dropZone = document.getElementById('drop-zone');
     if (dropZone) {
@@ -48,9 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 fileInput.click();
             }
         });
-        dropZone.addEventListener('dragover', (e) => { 
-            e.preventDefault(); 
-            dropZone.classList.add('dragover'); 
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
         });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
         dropZone.addEventListener('drop', (e) => {
@@ -83,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append("file", file);
 
             try {
-                const res = await fetch(`${API_BASE}/api/v1/extract-text`, {
+                const res = await fetch(`${API_URL}/api/v1/extract-text`, {
                     method: 'POST',
                     body: formData
                 });
@@ -94,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const data = await res.json();
-                
+
                 // Add new row with extracted text
                 const row = document.createElement('div');
                 row.className = 'resume-input-row';
@@ -108,21 +107,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert(`Error processing ${file.name}: ` + error.message);
             }
         }
-        
+
         // Clear input to allow uploading the same file again if needed
         e.target.value = "";
     }
 
     async function fetchModelInfo() {
         try {
-            const res = await fetch(`${API_BASE}/api/v1/model/info`);
+
             if (!res.ok) throw new Error('Failed to fetch model info');
             const data = await res.json();
-            
+
             document.getElementById('model-name').textContent = data.active_model;
             document.getElementById('model-auc').textContent = data.validation_auc.toFixed(3);
             document.getElementById('model-version').textContent = data.version;
-            
+
             const indicator = document.querySelector('.status-indicator');
             if (data.active_model.includes('unknown')) {
                 indicator.style.background = 'var(--accent-danger)';
@@ -132,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 indicator.style.background = 'var(--accent-success)';
                 indicator.style.boxShadow = '0 0 10px var(--accent-success)';
             }
-            
+
             const dpf = document.getElementById('dash-pending-feedback');
             if (dpf) {
                 dpf.textContent = data.samples_since_retrain;
@@ -155,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const resumeRows = Array.from(document.querySelectorAll('.resume-input-row'));
             const resumes = resumeRows.map((row, idx) => {
-                const id = row.querySelector('.cand-id').value.trim() || `Candidate-${idx+1}`;
+                const id = row.querySelector('.cand-id').value.trim() || `Candidate-${idx + 1}`;
                 const text = row.querySelector('.cand-text').value.trim();
                 return { candidate_id: id, text };
             }).filter(r => r.text.length >= 50);
@@ -180,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 model_flavor: "xgboost"
             };
 
-            const res = await fetch(`${API_BASE}/api/v1/screen`, {
+            const res = await fetch(`${API_URL}/api/v1/screen`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -210,13 +209,13 @@ document.addEventListener('DOMContentLoaded', () => {
             let scoreClass = 'low';
             let autoDecision = 'REJECT Candidate';
             let decisionColor = 'var(--accent-danger)';
-            
-            if (cand.hybrid_score >= 0.70) { 
-                scoreClass = 'high'; 
+
+            if (cand.hybrid_score >= 0.70) {
+                scoreClass = 'high';
                 autoDecision = 'SELECT Candidate';
                 decisionColor = 'var(--accent-success)';
-            } else if (cand.hybrid_score >= 0.40) { 
-                scoreClass = 'medium'; 
+            } else if (cand.hybrid_score >= 0.40) {
+                scoreClass = 'medium';
                 autoDecision = 'REVIEW Candidate';
                 decisionColor = 'var(--accent-warning)';
             }
@@ -224,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'candidate-card';
             card.style.animationDelay = `${idx * 0.1}s`;
-            
+
             // Build Positive factors HTML
             const posHtml = cand.explanation.top_positive_factors.map(f => `<li>${f}</li>`).join('');
             const negHtml = cand.explanation.top_negative_factors.map(f => `<li>${f}</li>`).join('');
@@ -283,12 +282,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 
                 <div style="margin-top: 12px;">
-                    <button class="btn btn-outline btn-sm deep-dive-btn" data-cand-id="${cand.candidate_id}" data-stats='${JSON.stringify({pos: cand.explanation.top_positive_factors, neg: cand.explanation.top_negative_factors})}' style="width: 100%; border-color: var(--accent-primary); color: var(--accent-primary);">
+                    <button class="btn btn-outline btn-sm deep-dive-btn" data-cand-id="${cand.candidate_id}" data-stats='${JSON.stringify({ pos: cand.explanation.top_positive_factors, neg: cand.explanation.top_negative_factors })}' style="width: 100%; border-color: var(--accent-primary); color: var(--accent-primary);">
                         <i class="fa-solid fa-magnifying-glass-chart"></i> Deep Dive Analysis
                     </button>
                 </div>
             `;
-            
+
             candidatesList.appendChild(card);
         });
 
@@ -296,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.btn-feedback').forEach(btn => {
             btn.addEventListener('click', handleFeedback);
         });
-        
+
         // Add deep dive event listeners
         document.querySelectorAll('.deep-dive-btn').forEach(btn => {
             btn.addEventListener('click', openDeepDive);
@@ -309,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const stats = JSON.parse(btn.dataset.stats);
         const originalText = window.lastScreeningCache.resumes[candId] || "Text not found";
         const requiredSkills = window.lastScreeningCache.skills || [];
-        
+
         // Accurate highlighting logic based on required skills
         let highlightedText = originalText;
         if (requiredSkills.length > 0) {
@@ -321,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('modal-cand-name').textContent = candId;
         document.getElementById('modal-resume-text').innerHTML = highlightedText;
-        
+
         // Populate reasoning
         const reasoningList = document.getElementById('modal-reasoning-list');
         reasoningList.innerHTML = '';
@@ -334,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('deep-dive-modal').style.display = 'flex';
     }
-    
+
     document.getElementById('close-modal-btn')?.addEventListener('click', () => {
         document.getElementById('deep-dive-modal').style.display = 'none';
     });
@@ -344,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const actionsContainer = btn.closest('.feedback-actions');
         const candId = actionsContainer.dataset.candId;
         const jobId = actionsContainer.dataset.jobId;
-        
+
         let decision = "on_hold";
         if (btn.classList.contains('shortlist')) decision = "shortlisted";
         if (btn.classList.contains('reject')) decision = "rejected";
@@ -352,8 +351,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const orgText = btn.innerHTML;
             btn.innerHTML = '...';
-            
-            const res = await fetch(`${API_BASE}/api/v1/feedback`, {
+
+            const res = await fetch(`${API_URL}/api/v1/feedback`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -365,29 +364,29 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!res.ok) throw new Error('Failed to record feedback');
-            
+
             // Visual feedback
             actionsContainer.querySelectorAll('.btn-feedback').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             btn.innerHTML = orgText;
-            
+
             // Re-fetch model info to update actionable samples count
             fetchModelInfo();
-            
-        } catch(error) {
+
+        } catch (error) {
             alert(error.message);
         }
     }
 
     async function handleRetraining() {
         if (!confirm("Are you sure you want to trigger model retraining using collected feedback?")) return;
-        
+
         const orgText = retrainBtn.innerHTML;
         retrainBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Retraining...';
         retrainBtn.disabled = true;
 
         try {
-            const res = await fetch(`${API_BASE}/api/v1/retrain`, {
+            const res = await fetch(`${API_URL}/api/v1/retrain`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -395,22 +394,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     force: false
                 })
             });
-            
+
             if (!res.ok) {
                 const err = await res.json();
                 throw new Error(err.detail || 'Retraining failed');
             }
-            
+
             const data = await res.json();
-            
+
             let msg = `Retraining completed!\nStatus: ${data.reason}\n`;
             if (data.promoted) {
                 msg += `New AUC: ${data.new_auc}\nIncumbent AUC: ${data.incumbent_auc}`;
             }
             alert(msg);
-            
+
             fetchModelInfo();
-        } catch(error) {
+        } catch (error) {
             alert("Error: " + error.message);
         } finally {
             retrainBtn.innerHTML = orgText;
@@ -421,7 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialization
     async function initSettings() {
         try {
-            const res = await fetch(`${API_BASE}/api/v1/settings`);
+            const res = await fetch(`${API_URL}/api/v1/settings`);
             if (res.ok) {
                 const data = await res.json();
                 const thresVal = parseInt(data.threshold * 100);
@@ -442,7 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const screenView = document.getElementById('screen-view');
     const dashboardView = document.getElementById('dashboard-view');
     const settingsView = document.getElementById('settings-view');
-    
+
     // UI Element References
     const dashLoading = document.getElementById('dash-loading');
     const dashEmpty = document.getElementById('dash-empty');
@@ -471,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     threshold: parseFloat(thresSlider.value) / 100,
                     mode: document.getElementById('settings-mode').value
                 };
-                const res = await fetch(`${API_BASE}/api/v1/settings`, {
+                const res = await fetch(`${API_URL}/api/v1/settings`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -488,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    window.switchView = function(viewName) {
+    window.switchView = function (viewName) {
         console.log("Switching to view:", viewName);
         // Reset all views
         const views = {
@@ -496,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'dashboard': dashboardView,
             'settings': settingsView
         };
-        
+
         const navLinks = {
             'screen': navScreen,
             'dashboard': navDashboard,
@@ -510,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 v.classList.remove('animate-spring-in');
             }
         });
-        
+
         // Remove active class from all navs
         Object.values(navLinks).forEach(n => {
             if (n) n.classList.remove('active');
@@ -523,9 +522,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Trigger reflow for animation
             void activeView.offsetWidth;
             activeView.classList.add('animate-spring-in');
-            
+
             if (navLinks[viewName]) navLinks[viewName].classList.add('active');
-            
+
             // Update page title
             const titles = {
                 'screen': 'Screen Candidates',
@@ -533,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'settings': 'System Control Center'
             };
             if (pageTitle) pageTitle.innerText = titles[viewName];
-            
+
             // Load data if needed
             if (viewName === 'dashboard') loadDashboardData();
         }
@@ -544,9 +543,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function generateMockData() {
         const mockCands = [
-            { candidate_id: "Mock_Dr_Jane_Doe_PhD", hybrid_score: 0.94, hire_probability: 0.95, explanation: { top_positive_factors: ["Distinguished ML & Research Background", "Perfect keyword symmetry"], top_negative_factors: [] }, component_scores: {tfidf_score:0.95,semantic_score:0.96,skill_match_score:0.91} },
-            { candidate_id: "Mock_Alex_Software_Eng", hybrid_score: 0.81, hire_probability: 0.80, explanation: { top_positive_factors: ["Strong foundational coding", "Cloud certifications present"], top_negative_factors: ["Missing specialized AI history"] }, component_scores: {tfidf_score:0.8,semantic_score:0.85,skill_match_score:0.78} },
-            { candidate_id: "Mock_Sam_Intern", hybrid_score: 0.38, hire_probability: 0.35, explanation: { top_positive_factors: ["Academic projects"], top_negative_factors: ["No industry experience", "Missing core requested technologies"] }, component_scores: {tfidf_score:0.35,semantic_score:0.45,skill_match_score:0.34} }
+            { candidate_id: "Mock_Dr_Jane_Doe_PhD", hybrid_score: 0.94, hire_probability: 0.95, explanation: { top_positive_factors: ["Distinguished ML & Research Background", "Perfect keyword symmetry"], top_negative_factors: [] }, component_scores: { tfidf_score: 0.95, semantic_score: 0.96, skill_match_score: 0.91 } },
+            { candidate_id: "Mock_Alex_Software_Eng", hybrid_score: 0.81, hire_probability: 0.80, explanation: { top_positive_factors: ["Strong foundational coding", "Cloud certifications present"], top_negative_factors: ["Missing specialized AI history"] }, component_scores: { tfidf_score: 0.8, semantic_score: 0.85, skill_match_score: 0.78 } },
+            { candidate_id: "Mock_Sam_Intern", hybrid_score: 0.38, hire_probability: 0.35, explanation: { top_positive_factors: ["Academic projects"], top_negative_factors: ["No industry experience", "Missing core requested technologies"] }, component_scores: { tfidf_score: 0.35, semantic_score: 0.45, skill_match_score: 0.34 } }
         ];
         return {
             total_count: 36,
@@ -559,9 +558,9 @@ document.addEventListener('DOMContentLoaded', () => {
         dashLoading.style.display = 'flex';
         dashEmpty.style.display = 'none';
         dashTableContainer.style.display = 'none';
-        
+
         try {
-            const res = await fetch(`${API_BASE}/api/v1/dashboard`);
+            const res = await fetch(`${API_URL}/api/v1/dashboard`);
             if (res.ok) {
                 const data = await res.json();
                 if (data.total_count === 0 || !data.all_candidates || data.all_candidates.length === 0) {
@@ -581,9 +580,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderDashboard(data) {
         dashLoading.style.display = 'none';
-        
+
         document.getElementById('dash-total-screened').textContent = data.total_count || 0;
-        
+
         if (!data.all_candidates || data.all_candidates.length === 0) {
             document.getElementById('dash-avg-score').textContent = '0%';
             dashEmpty.style.display = 'block';
@@ -608,7 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (distributionChart) distributionChart.destroy();
-            
+
             const ctx = chartCanvas.getContext('2d');
             distributionChart = new Chart(ctx, {
                 type: 'bar',
@@ -637,7 +636,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
-        
+
         // Animate stats
         const prevTotal = parseInt(document.getElementById('dash-total-screened').dataset.prev || 0);
         animateValue('dash-total-screened', prevTotal, data.total_count, 1000);
@@ -656,10 +655,10 @@ document.addEventListener('DOMContentLoaded', () => {
             dashTop5List.innerHTML += `
                 <div style="background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 24px; height: 24px; border-radius: 50%; background: ${actionColor}20; color: ${actionColor}; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800;">${idx+1}</div>
+                        <div style="width: 24px; height: 24px; border-radius: 50%; background: ${actionColor}20; color: ${actionColor}; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800;">${idx + 1}</div>
                         <div style="font-weight: 600; font-size: 13px; color: #fff;">${cand.candidate_id.split('_').pop()}</div>
                     </div>
-                    <div style="color: ${actionColor}; font-weight: 800; font-size: 13px;">${(cand.hybrid_score*100).toFixed(0)}%</div>
+                    <div style="color: ${actionColor}; font-weight: 800; font-size: 13px;">${(cand.hybrid_score * 100).toFixed(0)}%</div>
                 </div>
             `;
         });
@@ -670,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let autoDecision = cand.hybrid_score >= 0.70 ? 'SELECT' : (cand.hybrid_score >= 0.40 ? 'REVIEW' : 'REJECT');
             let decisionColor = cand.hybrid_score >= 0.70 ? 'var(--accent-success)' : (cand.hybrid_score >= 0.40 ? 'var(--accent-warning)' : 'var(--accent-danger)');
             let autoDescId = cand.candidate_id.replace(/'/g, ''); // Fix payload breaking quotes
-            
+
             // Reconstruct stats string securely
             const statsPayload = JSON.stringify({
                 pos: cand.explanation.top_positive_factors,
@@ -679,7 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Generate mock history resumes if using mock data
             if (!window.lastScreeningCache) {
-                 window.lastScreeningCache = { skills: ["Python", "Machine Learning"], resumes: {} };
+                window.lastScreeningCache = { skills: ["Python", "Machine Learning"], resumes: {} };
             }
             if (!window.lastScreeningCache.resumes[cand.candidate_id]) {
                 window.lastScreeningCache.resumes[cand.candidate_id] = "Simulated resume text for " + cand.candidate_id + ". Extensive history with Python, Machine Learning, and algorithms mapping to keyword metrics in the vector database.";
@@ -688,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dashTableBody.innerHTML += `
                 <tr>
                     <td>${cand.candidate_id}</td>
-                    <td style="color: ${decisionColor}; font-weight: 700;">${(cand.hybrid_score*100).toFixed(1)}%</td>
+                    <td style="color: ${decisionColor}; font-weight: 700;">${(cand.hybrid_score * 100).toFixed(1)}%</td>
                     <td>
                         <span class="badge" style="background: ${decisionColor}20; color: ${decisionColor}; border: 1px solid ${decisionColor}40;">
                             ${autoDecision}
