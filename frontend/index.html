@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Auto-Screener</title>
+    <link rel="stylesheet" href="style.css?v=4">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js for interactive dashboard -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Three.js for 3D Background -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+
+<body>
+    <canvas id="bg-canvas"></canvas>
+    
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon"><i class="fa-solid fa-brain"></i></div>
+                <h2>AuraScreen</h2>
+            </div>
+            <nav>
+                <a href="#" class="active" id="nav-screen"><i class="fa-solid fa-users-viewfinder"></i> Screen
+                    Candidates</a>
+                <a href="#" id="nav-dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+                <a href="#" id="nav-settings"><i class="fa-solid fa-gear"></i> Settings</a>
+            </nav>
+            <div class="model-status" id="model-status">
+                <div class="status-indicator"></div>
+                <div class="status-details">
+                    <span class="status-title">Model: <span id="model-name">Loading...</span></span>
+                    <span class="status-meta">AUC: <span id="model-auc">-</span> | v<span
+                            id="model-version">-</span></span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header>
+                <div class="header-left">
+                    <h1 id="page-title">Screen Candidates</h1>
+                    <p id="page-subtitle">AI-powered hybrid screening and explainability</p>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-outline" id="retrain-btn"><i class="fa-solid fa-rotate-right"></i> Retrain
+                        Model</button>
+                    <div class="user-profile">
+                        <img src="https://ui-avatars.com/api/?name=Recruiter&background=0D8ABC&color=fff" alt="User">
+                    </div>
+                </div>
+            </header>
+
+            <div id="screen-view">
+                <div class="content-grid">
+                    <!-- Job Setup Panel -->
+                    <div class="panel setup-panel">
+                        <h3><i class="fa-solid fa-briefcase"></i> Job Requirements</h3>
+                        <div class="form-group">
+                            <label>Job Title / ID</label>
+                            <input type="text" id="job-id" value="Data Scientist - Senior">
+                        </div>
+                        <div class="form-group">
+                            <label>Job Description</label>
+                            <textarea id="job-description"
+                                rows="5">We are looking for a Data Scientist with Python, machine learning, SQL, pandas, numpy, scikit-learn, TensorFlow, PyTorch, data visualization, and statistics expertise.</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Required Skills (comma separated)</label>
+                            <input type="text" id="required-skills"
+                                value="python, machine learning, sql, pandas, numpy, tensorflow, pytorch, scikit-learn, statistics, data visualization">
+                        </div>
+
+                        <h3><i class="fa-solid fa-file-lines"></i> Resumes to Screen</h3>
+                        <div class="resume-inputs" id="resume-inputs">
+                            <div class="resume-input-row">
+                                <input type="text" placeholder="Candidate Name (e.g. Alice)" class="cand-id">
+                                <textarea placeholder="Paste resume text here..." class="cand-text"
+                                    rows="2">Data Scientist with 5 years experience in Python, Machine Learning, SQL, Pandas, and TensorFlow. Master's degree in Computer Science.</textarea>
+                            </div>
+                            <div class="resume-input-row">
+                                <input type="text" placeholder="Candidate Name (e.g. Bob)" class="cand-id">
+                                <textarea placeholder="Paste resume text here..." class="cand-text"
+                                    rows="2">Web Developer skilled in HTML, CSS, JavaScript, React. 2 years experience building responsive web applications.</textarea>
+                            </div>
+                        </div>
+
+                        <div id="drop-zone" class="drop-zone animate-slide-up" style="animation-delay: 0.3s;">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <p>Drag & drop resumes here or <span>click to browse</span></p>
+                            <input type="file" id="resume-file-input" style="display: none;" accept=".txt,.pdf,.docx"
+                                multiple>
+                        </div>
+
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary btn-sm" id="add-resume-btn"><i
+                                    class="fa-solid fa-plus"></i> Add Manually</button>
+                        </div>
+
+                        <div class="actions-panel">
+                            <button class="btn btn-primary btn-large" id="screen-btn"><i
+                                    class="fa-solid fa-wand-magic-sparkles"></i> Screen Now</button>
+                        </div>
+                    </div>
+
+                    <!-- Results Panel -->
+                    <div class="panel results-panel">
+                        <div class="results-header">
+                            <h3><i class="fa-solid fa-ranking-star"></i> Ranked Candidates</h3>
+                            <span class="badge" id="results-count">0 candidates</span>
+                        </div>
+
+                        <div class="candidates-list" id="candidates-list">
+                            <div class="empty-state">
+                                <div class="empty-3d-visual">
+                                    <i class="fa-solid fa-inbox"></i>
+                                    <div class="scan-line-3d"></div>
+                                </div>
+                                <p>Submit resumes to see AI rankings and explanations.</p>
+                            </div>
+                            <!-- Candidate cards injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- End screen-view -->
+
+            <div id="dashboard-view" style="display: none; flex-direction: column; flex: 1; gap: 24px;">
+                <!-- Top Header for Dashboard -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div>
+                        <h3 style="margin: 0; font-size: 20px;">Intelligence Overview</h3>
+                        <p style="color: var(--text-secondary); font-size: 13px;">Real-time telemetry and screening performance metrics</p>
+                    </div>
+                    <div class="live-indicator">
+                        <span class="pulse-dot"></span>
+                        LIVE SYNC ACTIVE
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+                    <div class="stat-card">
+                        <i class="fa-solid fa-users-rays" style="font-size: 24px; color: var(--accent-primary);"></i>
+                        <h2 id="dash-total-screened">0</h2>
+                        <p>Total Profiles Analyzed</p>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <i class="fa-solid fa-bolt-lightning" style="font-size: 24px; color: var(--accent-success);"></i>
+                        <h2 id="dash-avg-score">0%</h2>
+                        <p>Mean Alignment Score</p>
+                    </div>
+                    
+                    <div class="panel" style="padding: 24px;">
+                        <h3 style="font-size: 14px; margin-bottom: 16px; color: var(--accent-warning);"><i class="fa-solid fa-medal"></i> Elite Performers</h3>
+                        <div id="dash-top-5-list" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle: Distribution & Matrix -->
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; flex: 1;">
+                    <div class="panel chart-panel">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3><i class="fa-solid fa-chart-line"></i> Match Distribution</h3>
+                            <div class="chart-legend">
+                                <span class="legend-item"><span class="dot low"></span> Low</span>
+                                <span class="legend-item"><span class="dot mid"></span> Optimal</span>
+                                <span class="legend-item"><span class="dot high"></span> Elite</span>
+                            </div>
+                        </div>
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="main-distribution-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="panel" style="display: flex; flex-direction: column;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3><i class="fa-solid fa-layer-group"></i> Active Screening Matrix</h3>
+                            <button class="btn btn-outline" style="font-size: 11px; padding: 6px 12px;" onclick="switchView('screen')"><i class="fa-solid fa-plus"></i> New Batch</button>
+                        </div>
+                        
+                        <div id="dash-loading" style="display: none; flex-direction: column; align-items: center; justify-content: center; flex: 1; opacity: 0.7;">
+                            <div class="aura-loader">
+                                <div class="aura-circle"></div>
+                                <div class="aura-circle shadow"></div>
+                            </div>
+                            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 24px;">Synthesizing data points...</p>
+                        </div>
+                        
+                        <div id="dash-empty" class="empty-state" style="display: none;">
+                            <i class="fa-solid fa-folder-open"></i>
+                            <p>No screening records found in the current session.</p>
+                        </div>
+
+                        <div id="dash-table-container" style="display: none; overflow-y: auto; flex: 1;">
+                            <table class="dash-table">
+                                <thead>
+                                    <tr>
+                                        <th>Talent Identity</th>
+                                        <th>Match Score</th>
+                                        <th>AI Verdict</th>
+                                        <th style="text-align: right;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dash-table-body">
+                                    <!-- Injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- End dashboard-view -->
+
+            <div id="settings-view" style="display: none;">
+                <div class="content-grid" style="grid-template-columns: 1.2fr 0.8fr; gap: 32px;">
+                    <div class="panel">
+                        <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 20px; margin-bottom: 32px;">
+                            <h3 style="margin: 0;"><i class="fa-solid fa-sliders"></i> Engine Configuration</h3>
+                            <p style="color: var(--text-secondary); font-size: 14px; margin-top: 8px;">Calibrate the hybrid scoring neurons and precision thresholds.</p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Neural Identity</label>
+                            <input type="text" value="AuraCore v2.1.0-PREMIUM" disabled style="opacity: 0.6; letter-spacing: 1px;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-top: 32px;">
+                            <label style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>Core Decision Sensitivity</span>
+                                <span id="settings-threshold-display" style="color: var(--accent-primary); font-size: 18px; font-weight: 800;">0.70</span>
+                            </label>
+                            <div style="position: relative; padding: 20px 0;">
+                                <input type="range" id="settings-threshold" style="width: 100%; height: 8px; appearance: none; background: rgba(255,255,255,0.05); border-radius: 999px; cursor: pointer; outline: none;" min="0" max="100" value="70">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.5px;">
+                                <span style="color: var(--accent-secondary);">HIGH RECALL (SENSITIVE)</span>
+                                <span style="color: var(--accent-primary);">HIGH PRECISION (STRICT)</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 32px;">
+                            <label>Heuristic Weight Strategy</label>
+                            <select id="settings-mode">
+                                <option value="balanced">Dynamic Balance (Default Optimised)</option>
+                                <option value="semantic">Contextual Priority (Deep Semantic)</option>
+                                <option value="keyword">Technical Filter (Hard Skill Focus)</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-top: 40px; padding-top: 32px; border-top: 1px solid var(--border-color);">
+                            <button id="btn-save-settings" class="btn btn-primary" style="width: 100%; height: 54px; font-size: 15px;"><i class="fa-solid fa-shuttle-space"></i> Sync Intelligence Configuration</button>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 32px;">
+                        <div class="panel" style="border-left: 4px solid var(--accent-danger);">
+                            <h3 style="color: var(--accent-danger);"><i class="fa-solid fa-skull-crossbones"></i> Critical Systems</h3>
+                            <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin-bottom: 24px;">Nuclear-level operations that reset system learning weights and historical telemetry.</p>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 16px;">
+                                <button class="btn btn-outline" style="width: 100%; border-color: rgba(244, 63, 94, 0.3); color: var(--accent-danger); padding: 16px;">
+                                    <div style="text-align: left; flex: 1;">
+                                        <div style="font-weight: 700; font-size: 13px;">Wipe Execution Cache</div>
+                                        <div style="font-weight: 400; font-size: 11px; opacity: 0.8; text-transform: none;">Clear all transient vector embeddings</div>
+                                    </div>
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                                
+                                <button class="btn btn-outline" style="width: 100%; border-color: rgba(245, 158, 11, 0.3); color: var(--accent-warning); padding: 16px;">
+                                    <div style="text-align: left; flex: 1;">
+                                        <div style="font-weight: 700; font-size: 13px;">Hard Rollback Engine</div>
+                                        <div style="font-weight: 400; font-size: 11px; opacity: 0.8; text-transform: none;">Revert to stable AuraCore v1.9.0</div>
+                                    </div>
+                                    <i class="fa-solid fa-clock-rotate-left"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <h3><i class="fa-solid fa-circle-info"></i> Engine Intelligence</h3>
+                            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: var(--text-secondary);">Core Framework</span>
+                                    <span style="font-weight: 600;">FastAPI 0.103+</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: var(--text-secondary);">Parsing Layer</span>
+                                    <span style="font-weight: 600;">PyMiner v2.0</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: var(--text-secondary);">Encryption</span>
+                                    <span style="color: var(--accent-success); font-weight: 600;">AES-256 Enabled</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Deep Dive Analysis Modal -->
+        <div id="deep-dive-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content panel animate-slide-up">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-microscope"></i> Deep Dive Analysis: <span
+                            id="modal-cand-name">Candidate</span></h3>
+                    <button id="close-modal-btn" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div class="modal-body"
+                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px;">
+                    <div class="modal-section">
+                        <h4 style="color: var(--accent-primary); margin-bottom: 12px;"><i
+                                class="fa-solid fa-highlighter"></i> Extracted Context Match</h4>
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">The system
+                            identified the following direct and semantic matches in the source text:</p>
+                        <div id="modal-resume-text"
+                            style="background: rgba(0,0,0,0.3); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 14px; line-height: 1.6; max-height: 300px; overflow-y: auto; white-space: pre-wrap;">
+                            <!-- Highlighted text injected here -->
+                        </div>
+                    </div>
+
+                    <div class="modal-section">
+                        <h4 style="color: var(--accent-success); margin-bottom: 12px;"><i
+                                class="fa-solid fa-bullseye"></i> Accuracy Trace</h4>
+                        <div
+                            style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-sm); font-size: 13px; color: var(--text-secondary); height: 100%;">
+                            <p style="margin-bottom: 12px;"><strong>Confidence Determinants:</strong></p>
+                            <ul id="modal-reasoning-list"
+                                style="margin-left: 20px; display: flex; flex-direction: column; gap: 8px;">
+                                <!-- AI Reasoning Trace injected here -->
+                            </ul>
+
+                            <div
+                                style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05);">
+                                <p style="font-weight: 600; color: white;">Final Verdict Processing Route:</p>
+                                <div
+                                    style="display: flex; gap: 8px; margin-top: 12px; align-items: center; justify-content: space-between;">
+                                    <div class="trace-step"><i class="fa-solid fa-file-invoice"></i><br>Tokenized</div>
+                                    <i class="fa-solid fa-arrow-right"
+                                        style="color: var(--accent-primary); font-size: 10px;"></i>
+                                    <div class="trace-step"><i class="fa-solid fa-network-wired"></i><br>Embedded</div>
+                                    <i class="fa-solid fa-arrow-right"
+                                        style="color: var(--accent-primary); font-size: 10px;"></i>
+                                    <div class="trace-step"><i class="fa-solid fa-scale-balanced"></i><br>Scored</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="app.js?v=4"></script>
+</body>
+
+</html>
